@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>👋 Welcome, {{ user.name }}</h2>
+            <a href="{{ url_for('analyzed_repos') }}" class="btn btn-outline-primary">📂 List Analyzed Repos</a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">Add Repository</div>
+            <div class="card-body">
+                <form action="{{ url_for('add_repo') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">GitHub URL</label>
+                        <input type="text" name="url" class="form-control"
+                            placeholder="https://github.com/fastapi/fastapi" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Repository</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Your Repositories</div>
+            <div class="card-body">
+                {% if repos %}
+                <ul class="list-group">
+                    {% for repo in repos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5>{{ repo.full_name }}</h5>
+                            <small class="text-muted"><a href="{{ repo.url }}" target="_blank">{{ repo.url
+                                    }}</a></small>
+
+                            <!-- Simple list of existing jobs could be added here -->
+                            {% if repo.last_job_id %}
+                            <div class="mt-1">
+                                <a href="{{ url_for('view_analysis', job_id=repo.last_job_id) }}"
+                                    class="badge bg-secondary">View Last Analysis</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group">
+                            <form action="{{ url_for('start_analysis_route', repo_id=repo.id) }}" method="POST"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-success">Analyze 🚀</button>
+                            </form>
+                            <a href="{{ url_for('chat', repo_id=repo.id) }}"
+                                class="btn btn-sm btn-outline-info">Chat 💬</a>
+                            <a href="{{ url_for('delete_repo', repo_id=repo.id) }}"
+                                class="btn btn-sm btn-outline-danger ms-2">Remove</a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No repositories added yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

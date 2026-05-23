@@ -1,0 +1,7 @@
+2026-05-23 14:26:57,466 - github_fetcher - INFO - Initiating fetch_repo_zip for repository URL: 'https://github.com/armandossrecife/snake' | Job ID: 1
+2026-05-23 14:26:57,466 - github_fetcher - INFO - Downloading repository ZIP from: 'https://github.com/armandossrecife/snake/archive/HEAD.zip' to path: 'storage/repos\1\repo.zip'
+2026-05-23 14:26:58,652 - github_fetcher - INFO - Repository ZIP successfully downloaded. Received: 103546 bytes.
+2026-05-23 14:26:58,654 - github_fetcher - INFO - Extracting ZIP archive at 'storage/repos\1\repo.zip'...
+2026-05-23 14:26:58,688 - github_fetcher - INFO - Repository ZIP successfully extracted to 'storage/repos\1'.
+2026-05-23 14:26:58,689 - github_fetcher - INFO - Cleaned up ZIP file at 'storage/repos\1\repo.zip'.
+2026-05-23 14:26:58,691 - github_fetcher - INFO - Found unique repository root folder: 'storage/repos\1\snake-832cddf1ce437049f1ad03871136c1c188f487f3'

@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+pydantic[email]
+python-jose[cryptography]
+passlib
+bcrypt==4.0.1
+python-multipart
+httpx
+requests
+aiofiles
+markdown
+xhtml2pdf

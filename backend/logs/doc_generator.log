@@ -1,0 +1,3 @@
+2026-05-23 14:26:58,753 - doc_generator - INFO - Starting generate_documentation. Aggregated evidence keys: ['structure', 'stats', 'files_content']
+2026-05-23 14:27:01,464 - doc_generator - INFO - Sending prompt to LM Studio. Prompt payload size: 6848 characters.
+2026-05-23 14:28:30,102 - doc_generator - INFO - Generated documentation. Markdown size: 5235 characters.

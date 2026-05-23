@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row" style="height: 80vh;">
+    <!-- Session List -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Chat Sessions</h5>
+            </div>
+            <div class="card-body p-0" style="overflow-y: auto;">
+                {% if sessions %}
+                <div class="list-group list-group-flush">
+                    {% for s in sessions %}
+                    <a href="{{ url_for('chat', repo_id=repo.id, session_id=s.id) }}"
+                       class="list-group-item list-group-item-action {% if s.id == session_id %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="mb-1">{{ s.repo_name }}</small>
+                            <small>{{ s.message_count }} msg</small>
+                        </div>
+                        <small class="text-muted">{{ s.created_at[:19] if s.created_at else '' }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted p-3">No chat sessions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Chat - {{ repo.full_name }}</h5>
+                <span class="badge bg-info">Session: <span id="session-id">{{ session_id or "new" }}</span></span>
+            </div>
+            <div class="card-body p-0 d-flex flex-column">
+                <div id="chat-messages" class="flex-grow-1 p-3" style="overflow-y: auto; background: #f8f9fa;">
+                    {% if session_id and messages %}
+                        {% for msg in messages %}
+                        <div class="d-flex {% if msg.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %} mb-2">
+                            <div class="{% if msg.role == 'user' %}bg-primary text-white{% else %}bg-white border{% endif %} rounded-pill px-3 py-2" style="max-width: 75%;">
+                                <strong>{% if msg.role == 'user' %}You{% else %}AI{% endif %}:</strong><br>
+                                <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit; background: transparent;">{{ msg.content }}</pre>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    {% if not session_id %}
+                    <div class="text-center text-muted py-5">
+                        <p class="mb-1">Select a session or start a new conversation.</p>
+                        <small>Ask about architecture, code structure, requirements, or any technical detail.</small>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="p-3 border-top bg-white">
+                    <form id="chat-form" class="d-flex gap-2">
+                        <input type="hidden" id="repo-id" value="{{ repo.id }}">
+                        <input type="hidden" id="current-session" value="{{ session_id or '' }}">
+                        <textarea id="user-input" class="form-control" rows="2" placeholder="Ask about the repository... (e.g., 'How would this look in a layered architecture?')" required></textarea>
+                        <button type="submit" class="btn btn-primary align-self-end px-4" id="send-btn">
+                            <span id="send-label">Send</span>
+                            <span id="send-spinner" class="spinner-border spinner-border-sm d-none"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#chat-messages pre { font-size: 0.9rem; }
+.list-group-item.active { background-color: #0d6efd; border-color: #0d6efd; }
+</style>
+
+<script>
+const chatMessages = document.getElementById("chat-messages");
+const chatForm = document.getElementById("chat-form");
+const userInput = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+const sendLabel = document.getElementById("send-label");
+const sendSpinner = document.getElementById("send-spinner");
+const currentSessionInput = document.getElementById("current-session");
+const sessionIdDisplay = document.getElementById("session-id");
+
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+function appendMessage(role, content) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "d-flex " + (role === "user" ? "justify-content-end" : "justify-content-start") + " mb-2";
+
+    const bubble = document.createElement("div");
+    bubble.className = (role === "user" ? "bg-primary text-white" : "bg-white border") + " rounded-pill px-3 py-2";
+    bubble.style.maxWidth = "75%";
+
+    const strong = document.createElement("strong");
+    strong.textContent = role === "user" ? "You: " : "AI: ";
+    strong.appendChild(document.createElement("br"));
+
+    const pre = document.createElement("pre");
+    pre.className = "mb-0";
+    pre.style.whiteSpace = "pre-wrap";
+    pre.style.fontFamily = "inherit";
+    pre.style.background = "transparent";
+    pre.textContent = content;
+
+    bubble.appendChild(strong);
+    bubble.appendChild(pre);
+    wrapper.appendChild(bubble);
+    chatMessages.appendChild(wrapper);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+chatForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    userInput.value = "";
+    appendMessage("user", message);
+
+    sendLabel.classList.add("d-none");
+    sendSpinner.classList.remove("d-none");
+    sendBtn.disabled = true;
+
+    const repoId = document.getElementById("repo-id").value;
+    const sessionId = currentSessionInput.value;
+
+    const payload = { repository_id: parseInt(repoId), message: message };
+    if (sessionId) payload.session_id = sessionId;
+
+    try {
+        const resp = await fetch("http://127.0.0.1:8000/chat/send", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer {{ session.get('access_token') }}",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) {
+            appendMessage("assistant", "Error: API returned " + resp.status);
+        } else {
+            const data = await resp.json();
+            currentSessionInput.value = data.session_id;
+            sessionIdDisplay.textContent = data.session_id.substring(0, 8) + "...";
+            appendMessage("assistant", data.reply);
+            // Reload page to update session list
+            if (!sessionId) {
+                window.location.href = "{{ url_for('chat', repo_id=repo.id) }}?session_id=" + data.session_id;
+            }
+        }
+    } catch (err) {
+        appendMessage("assistant", "Error: Could not connect to backend.");
+    }
+
+    sendLabel.classList.remove("d-none");
+    sendSpinner.classList.add("d-none");
+    sendBtn.disabled = false;
+    userInput.focus();
+});
+</script>
+{% endblock %}

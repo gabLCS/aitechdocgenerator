@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<style>
+  /* ── Progress terminal ─────────────────────────────────────────── */
+  .progress-terminal {
+    background: #0d1117;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 1.2rem 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    color: #c9d1d9;
+  }
+  .progress-terminal .term-line {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #161b22;
+    align-items: flex-start;
+    animation: fadeInLine 0.3s ease;
+  }
+  .progress-terminal .term-line:last-child { border-bottom: none; }
+  @keyframes fadeInLine {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .term-ts  { color: #3fb950; white-space: nowrap; flex-shrink: 0; }
+  .term-msg { color: #e6edf3; }
+  .term-msg.done-msg  { color: #3fb950; font-weight: 600; }
+  .term-msg.error-msg { color: #f85149; font-weight: 600; }
+
+  /* ── Spinner ────────────────────────────────────────────────────── */
+  .pulse-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #ffc107;
+    animation: pulseDot 1.2s infinite;
+    margin-right: 6px;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── Status badge row ───────────────────────────────────────────── */
+  .status-row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+
+  /* ── Document card ──────────────────────────────────────────────── */
+  #doc-card { display: none; }
+</style>
+
+<div class="row">
+  <div class="col-md-12">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary mb-3">← Voltar ao Dashboard</a>
+    <h2>Análise do Repositório</h2>
+
+    <div class="status-row mb-3">
+      <span id="status-badge" class="badge bg-secondary fs-6">{{ job.status }}</span>
+      <span id="status-label" class="text-muted small"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Progress terminal (shown while PENDING / RUNNING) ─────────────── -->
+<div class="row mb-4" id="progress-section">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2">
+        <span class="pulse-dot" id="pulse-dot"></span>
+        <strong>Operações em Andamento</strong>
+        <span class="ms-auto text-muted small" id="poll-counter"></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="progress-terminal" id="terminal">
+          <div class="term-line">
+            <span class="term-ts">--:--:--</span>
+            <span class="term-msg text-muted">Aguardando início da análise...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Error alert ──────────────────────────────────────────────────── -->
+<div class="row mb-4" id="error-section" style="display:none !important;">
+  <div class="col-md-12">
+    <div class="alert alert-danger">
+      <strong>Erro:</strong> <span id="error-message"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Document card (shown when DONE) ──────────────────────────────── -->
+<div class="row" id="doc-card">
+  <div class="col-md-12">
+    <!-- Step log accordion ----------------------------------------- -->
+    <div class="accordion mb-3" id="stepsAccordion">
+      <div class="accordion-item border-0 shadow-sm">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#stepsCollapse">
+            📋 Ver log de execução da análise
+          </button>
+        </h2>
+        <div id="stepsCollapse" class="accordion-collapse collapse">
+          <div class="accordion-body p-0">
+            <div class="progress-terminal" id="terminal-done" style="max-height:250px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentation card ----------------------------------------- -->
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><strong>📄 Documentação Técnica Gerada</strong></span>
+        <a href="{{ url_for('download_pdf_route', job_id=job.id) }}"
+           class="btn btn-sm btn-outline-primary" target="_blank">⬇ Download PDF</a>
+      </div>
+      <div class="card-body">
+        <div id="content-area"></div>
+        <textarea id="markdown-source" style="display:none;">{{ document }}</textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: false });
+
+  // ── State ─────────────────────────────────────────────────────────
+  const JOB_ID       = {{ job.id }};
+  const POLL_URL     = `/api/analyses/${JOB_ID}/steps`;
+  const POLL_MS      = 2000;
+  let   knownSteps   = 0;
+  let   pollCount    = 0;
+  let   pollTimer    = null;
+  let   finalStatus  = "{{ job.status }}";
+
+  // ── DOM refs ──────────────────────────────────────────────────────
+  const terminal      = document.getElementById('terminal');
+  const terminalDone  = document.getElementById('terminal-done');
+  const statusBadge   = document.getElementById('status-badge');
+  const statusLabel   = document.getElementById('status-label');
+  const pulseDot      = document.getElementById('pulse-dot');
+  const pollCounter   = document.getElementById('poll-counter');
+  const progressSec   = document.getElementById('progress-section');
+  const errorSec      = document.getElementById('error-section');
+  const errorMsg      = document.getElementById('error-message');
+  const docCard       = document.getElementById('doc-card');
+
+  // ── Badge helper ──────────────────────────────────────────────────
+  function setBadge(status) {
+    const map = {
+      PENDING: ['bg-secondary', 'Aguardando início...'],
+      RUNNING: ['bg-warning text-dark', 'Em execução...'],
+      DONE:    ['bg-success', 'Concluído ✓'],
+      ERROR:   ['bg-danger',  'Falhou ✗'],
+    };
+    const [cls, label] = map[status] || ['bg-secondary', status];
+    statusBadge.className = `badge fs-6 ${cls}`;
+    statusBadge.textContent = status;
+    statusLabel.textContent = label;
+  }
+
+  // ── Format timestamp hh:mm:ss ─────────────────────────────────────
+  function fmtTs(iso) {
+    if (!iso) return '--:--:--';
+    return iso.slice(11, 19);
+  }
+
+  // ── Append a step line ────────────────────────────────────────────
+  function appendStep(container, step, idx) {
+    const line = document.createElement('div');
+    line.className = 'term-line';
+    const msgClass = step.message.startsWith('✅') ? 'done-msg'
+                   : step.message.startsWith('❌') ? 'error-msg'
+                   : '';
+    line.innerHTML = `<span class="term-ts">[${fmtTs(step.timestamp)}]</span>
+                      <span class="term-msg ${msgClass}">${escHtml(step.message)}</span>`;
+    container.appendChild(line);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Mermaid rendering ─────────────────────────────────────────────
+  function sanitizeMermaid(text) {
+    return text.replace(/\[([^"\]\n][^\]\n]*[()&{}<>][^\]\n]*)\]/g, '["$1"]');
+  }
+
+  async function renderMermaidDiagrams() {
+    const rawMd = document.getElementById('markdown-source').value;
+    const contentArea = document.getElementById('content-area');
+
+    if (!rawMd.trim()) return;
+
+    const mermaidTypes = ['graph ', 'flowchart ', 'sequenceDiagram', 'classDiagram', 'stateDiagram-v2', 'stateDiagram', 'erDiagram', 'gantt ', 'pie ', 'journey', 'gitgraph', 'mindmap', 'timeline', 'block'];
+
+    let processedMd = '';
+    const lines = rawMd.split('\n');
+    let inMermaid = false;
+    let inFence = false;
+
+    for (const line of lines) {
+      const trimmed = line.trimStart();
+
+      if (trimmed.startsWith('```')) {
+        if (inFence) inFence = false;
+        else inFence = true;
+        processedMd += line + '\n';
+        continue;
+      }
+      if (inFence) { processedMd += line + '\n'; continue; }
+
+      const isMermaidStart = mermaidTypes.some(t => trimmed.startsWith(t));
+      const isNewSection = trimmed.startsWith('Mermaid') || trimmed.startsWith('##');
+      const isSectionTitle = !line.startsWith(' ') && !line.startsWith('\t') && trimmed !== '' && !isMermaidStart;
+
+      if (isMermaidStart && !inMermaid) {
+        inMermaid = true;
+        processedMd += '```mermaid\n' + line + '\n';
+      } else if (inMermaid && (trimmed === '' || isMermaidStart || isNewSection || isSectionTitle)) {
+        processedMd += '```\n' + line + '\n';
+        inMermaid = isMermaidStart;
+        if (isMermaidStart) processedMd += '```mermaid\n';
+      } else {
+        processedMd += line + '\n';
+      }
+    }
+    if (inMermaid) processedMd += '```\n';
+
+    console.log('Mermaid blocks detected:', (processedMd.match(/```mermaid/g) || []).length);
+    if ((processedMd.match(/```mermaid/g) || []).length === 0) {
+      console.log('First 300 chars:', processedMd.slice(0, 300));
+    }
+
+    contentArea.innerHTML = await marked.parse(processedMd, { breaks: true, gfm: true });
+
+    contentArea.querySelectorAll('pre > code').forEach(el => {
+      const cls = el.className || '';
+      if (cls.includes('mermaid') || cls.includes('lang-mermaid')) {
+        const div = document.createElement('div');
+        div.className = 'mermaid';
+        div.textContent = sanitizeMermaid(el.textContent);
+        el.parentElement.replaceWith(div);
+      }
+    });
+    contentArea.querySelectorAll('pre.mermaid, pre.lang-mermaid').forEach(el => {
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = sanitizeMermaid(el.textContent);
+      el.replaceWith(div);
+    });
+
+    const diagrams = Array.from(document.querySelectorAll('.mermaid')).map(el => ({
+      text: el.textContent,
+      el: el
+    }));
+
+    if (diagrams.length === 0) {
+      console.log('No mermaid diagrams found');
+    } else {
+      console.log('Rendering', diagrams.length, 'diagrams');
+      for (const { text, el } of diagrams) {
+        try {
+          const { svg } = await mermaid.render('m-' + Math.random().toString(36).slice(2), text);
+          el.outerHTML = svg;
+        } catch (e) {
+          console.warn('Mermaid error:', e.message);
+          el.outerHTML = `<pre class="text-danger border p-2 bg-light"><strong>Invalid Mermaid diagram:</strong>\n${text}</pre>`;
+        }
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+  }
+
+  // ── Render document (DONE state) ──────────────────────────────────
+  async function renderDocument() {
+    const mdSource = document.getElementById('markdown-source').value;
+    if (!mdSource.trim()) {
+      document.getElementById('content-area').innerHTML = '<p class="text-muted">Documentação não disponível ainda.</p>';
+      return;
+    }
+    await renderMermaidDiagrams();
+  }
+
+  // ── Transition to DONE state ──────────────────────────────────────
+  function transitionToDone(steps) {
+    pulseDot.style.display = 'none';
+    progressSec.style.display = 'none';
+
+    terminalDone.innerHTML = '';
+    steps.forEach((s, i) => appendStep(terminalDone, s, i));
+    terminalDone.scrollTop = terminalDone.scrollHeight;
+
+    docCard.style.display = 'block';
+    renderDocument();
+  }
+
+  // ── Transition to ERROR state ─────────────────────────────────────
+  function transitionToError(msg, steps) {
+    pulseDot.style.display = 'none';
+    errorMsg.textContent = msg || 'Erro desconhecido.';
+    errorSec.style.removeProperty('display');
+
+    if (steps && steps.length) {
+      terminal.innerHTML = '';
+      steps.forEach((s, i) => appendStep(terminal, s, i));
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  // ── Poll ──────────────────────────────────────────────────────────
+  async function poll() {
+    pollCount++;
+    pollCounter.textContent = `atualização #${pollCount}`;
+
+    try {
+      const resp = await fetch(POLL_URL);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      setBadge(data.status);
+
+      const steps = data.steps || [];
+      if (steps.length > knownSteps) {
+        if (knownSteps === 0) terminal.innerHTML = '';
+        for (let i = knownSteps; i < steps.length; i++) {
+          appendStep(terminal, steps[i], i);
+        }
+        terminal.scrollTop = terminal.scrollHeight;
+        knownSteps = steps.length;
+      }
+
+      if (data.status === 'DONE') {
+        clearInterval(pollTimer);
+        finalStatus = 'DONE';
+        transitionToDone(steps);
+      } else if (data.status === 'ERROR') {
+        clearInterval(pollTimer);
+        finalStatus = 'ERROR';
+        transitionToError(data.error_message, steps);
+      }
+
+    } catch (e) {
+      console.warn('Poll error:', e);
+    }
+  }
+
+  // ── Bootstrap ─────────────────────────────────────────────────────
+  setBadge(finalStatus);
+
+  if (finalStatus === 'DONE') {
+    pulseDot.style.display = 'none';
+    progressSec.style.display = 'none';
+    docCard.style.display = 'block';
+    renderDocument();
+
+    fetch(POLL_URL).then(r => r.json()).then(data => {
+      (data.steps || []).forEach((s, i) => appendStep(terminalDone, s, i));
+    }).catch(() => {});
+
+  } else if (finalStatus === 'ERROR') {
+    fetch(POLL_URL).then(r => r.json()).then(data => {
+      transitionToError(data.error_message, data.steps);
+    }).catch(() => {});
+
+  } else {
+    poll();
+    pollTimer = setInterval(poll, POLL_MS);
+  }
+</script>
+{% endblock %}

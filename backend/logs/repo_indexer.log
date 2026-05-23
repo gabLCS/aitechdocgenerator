@@ -1,0 +1,5 @@
+2026-05-23 14:26:58,706 - repo_indexer - INFO - Starting directory traversal/indexing for: 'storage/repos\1\snake-832cddf1ce437049f1ad03871136c1c188f487f3'
+2026-05-23 14:26:58,707 - repo_indexer - INFO - Detected key repository file: 'README.md'
+2026-05-23 14:26:58,708 - repo_indexer - INFO - Indexing completed. Total files found: 12 | Key files: 1
+2026-05-23 14:26:58,710 - repo_indexer - INFO - Reading file content: 'storage/repos\1\snake-832cddf1ce437049f1ad03871136c1c188f487f3\README.md' | Limit: 100 lines
+2026-05-23 14:26:58,711 - repo_indexer - INFO - Successfully read file 'storage/repos\1\snake-832cddf1ce437049f1ad03871136c1c188f487f3\README.md'. Size: 3621 chars.
