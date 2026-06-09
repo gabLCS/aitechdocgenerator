@@ -1,11 +1,15 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 import bcrypt
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 
-# SECRET KEY should be in env vars in production. Hardcoded for MVP simplicity.
-SECRET_KEY = "supersecretkey"
+SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey")
+if SECRET_KEY == "supersecretkey":
+    import logging
+    logging.warning("Using default SECRET_KEY. Set SECRET_KEY environment variable for production.")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 

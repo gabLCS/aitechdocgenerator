@@ -1,4 +1,5 @@
 import json
+import secrets
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from .llm_provider import generate_text
@@ -39,7 +40,7 @@ def create_chat_session(
     repo_name: str = "unknown",
     evidence: dict | None = None
 ) -> str:
-    session_id = f"session_{repository_id}_{user_id}_{int(datetime.now(timezone.utc).timestamp())}"
+    session_id = f"session_{repository_id}_{user_id}_{int(datetime.now(timezone.utc).timestamp())}_{secrets.token_hex(4)}"
 
     repo_context = build_repo_context_from_evidence(evidence) if evidence else "No repository analysis available."
 

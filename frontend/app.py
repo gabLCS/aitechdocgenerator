@@ -4,7 +4,7 @@ import os
 from logging_config import get_custom_logger
 
 app = Flask(__name__)
-app.secret_key = "flask_secret_key"  # Change for production
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "flask_secret_key")
 API_URL = "http://127.0.0.1:8000"
 
 logger = get_custom_logger("initialization", "initialization.log")
@@ -300,6 +300,21 @@ def api_analysis_steps(job_id):
     headers = {"Authorization": f"Bearer {session['access_token']}"}
     try:
         resp = requests.get(f"{API_URL}/analyses/{job_id}/steps", headers=headers, timeout=5)
+        from flask import jsonify
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        from flask import jsonify
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/analyses/<int:job_id>/document")
+def api_analysis_document(job_id):
+    """JSON proxy: returns the generated markdown document."""
+    if "access_token" not in session:
+        from flask import jsonify
+        return jsonify({"error": "unauthorized"}), 401
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    try:
+        resp = requests.get(f"{API_URL}/analyses/{job_id}/document", headers=headers, timeout=10)
         from flask import jsonify
         return jsonify(resp.json()), resp.status_code
     except Exception as e:

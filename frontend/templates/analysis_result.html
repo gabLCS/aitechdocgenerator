@@ -139,6 +139,7 @@
   // ── State ─────────────────────────────────────────────────────────
   const JOB_ID       = {{ job.id }};
   const POLL_URL     = `/api/analyses/${JOB_ID}/steps`;
+  const DOC_URL      = `/api/analyses/${JOB_ID}/document`;
   const POLL_MS      = 2000;
   let   knownSteps   = 0;
   let   pollCount    = 0;
@@ -295,7 +296,7 @@
   }
 
   // ── Transition to DONE state ──────────────────────────────────────
-  function transitionToDone(steps) {
+  async function transitionToDone(steps) {
     pulseDot.style.display = 'none';
     progressSec.style.display = 'none';
 
@@ -303,8 +304,21 @@
     steps.forEach((s, i) => appendStep(terminalDone, s, i));
     terminalDone.scrollTop = terminalDone.scrollHeight;
 
+    // Fetch the actual document content from the API
+    try {
+      const resp = await fetch(DOC_URL);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.markdown) {
+          document.getElementById('markdown-source').value = data.markdown;
+        }
+      }
+    } catch (e) {
+      console.warn('Document fetch error:', e);
+    }
+
     docCard.style.display = 'block';
-    renderDocument();
+    await renderDocument();
   }
 
   // ── Transition to ERROR state ─────────────────────────────────────
@@ -363,8 +377,23 @@
   if (finalStatus === 'DONE') {
     pulseDot.style.display = 'none';
     progressSec.style.display = 'none';
-    docCard.style.display = 'block';
-    renderDocument();
+
+    // Fetch document if not already populated
+    (async () => {
+      try {
+        const resp = await fetch(DOC_URL);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.markdown) {
+            document.getElementById('markdown-source').value = data.markdown;
+          }
+        }
+      } catch (e) {
+        console.warn('Document fetch error:', e);
+      }
+      docCard.style.display = 'block';
+      await renderDocument();
+    })();
 
     fetch(POLL_URL).then(r => r.json()).then(data => {
       (data.steps || []).forEach((s, i) => appendStep(terminalDone, s, i));

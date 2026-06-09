@@ -9,3 +9,5 @@ backend/storage
 *.bat
 start.bat
 run.bat
+*.log
+logs/

@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
@@ -10,6 +11,8 @@ from ..services import github_fetcher, context_builder, doc_generator
 from ..logging_config import get_custom_logger
 
 logger = get_custom_logger("analyses", "analyses.log")
+
+ANALYSIS_TIMEOUT_SECONDS = int(os.environ.get("ANALYSIS_TIMEOUT_SECONDS", "300"))
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -53,7 +56,10 @@ async def run_analysis_pipeline(job_id: int, repo_url: str):
         try:
             # ── Step 2: Download ─────────────────────────────────────────────
             _add_step(db, job, "Baixando o repositório do GitHub (arquivo ZIP)...")
-            repo_path = await github_fetcher.fetch_repo_zip(repo_url, str(job_id))
+            repo_path = await asyncio.wait_for(
+                github_fetcher.fetch_repo_zip(repo_url, str(job_id)),
+                timeout=ANALYSIS_TIMEOUT_SECONDS
+            )
             _add_step(db, job, f"Download concluído. Arquivos extraídos em: {repo_path}")
 
             # ── Step 3: Index ────────────────────────────────────────────────
@@ -72,8 +78,11 @@ async def run_analysis_pipeline(job_id: int, repo_url: str):
             db.commit()
 
             # ── Step 5: LLM ─────────────────────────────────────────────────
-            _add_step(db, job, "Enviando pacote de evidências para o modelo de IA local (LM Studio)...")
-            markdown_doc = await doc_generator.generate_documentation(evidence, repo_path=repo_path)
+            _add_step(db, job, "Enviando pacote de evidências para o modelo de IA local...")
+            markdown_doc = await asyncio.wait_for(
+                doc_generator.generate_documentation(evidence, repo_path=repo_path),
+                timeout=ANALYSIS_TIMEOUT_SECONDS
+            )
             _add_step(db, job, f"Documentação gerada pelo LLM com sucesso ({len(markdown_doc)} caracteres).")
 
             # ── Step 6: Save document ────────────────────────────────────────

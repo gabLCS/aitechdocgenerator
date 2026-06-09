@@ -40,9 +40,9 @@
                     {% if session_id and messages %}
                         {% for msg in messages %}
                         <div class="d-flex {% if msg.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %} mb-2">
-                            <div class="{% if msg.role == 'user' %}bg-primary text-white{% else %}bg-white border{% endif %} rounded-pill px-3 py-2" style="max-width: 75%;">
-                                <strong>{% if msg.role == 'user' %}You{% else %}AI{% endif %}:</strong><br>
-                                <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit; background: transparent;">{{ msg.content }}</pre>
+                            <div class="{% if msg.role == 'user' %}bg-primary text-white{% else %}bg-white border{% endif %} chat-bubble">
+                                <strong>{% if msg.role == 'user' %}You{% else %}AI{% endif %}:</strong>
+                                <div class="chat-content">{% if msg.role == 'user' %}{{ msg.content }}{% else %}{{ msg.content }}{% endif %}</div>
                             </div>
                         </div>
                         {% endfor %}
@@ -58,7 +58,7 @@
                     <form id="chat-form" class="d-flex gap-2">
                         <input type="hidden" id="repo-id" value="{{ repo.id }}">
                         <input type="hidden" id="current-session" value="{{ session_id or '' }}">
-                        <textarea id="user-input" class="form-control" rows="2" placeholder="Ask about the repository... (e.g., 'How would this look in a layered architecture?')" required></textarea>
+                        <textarea id="user-input" class="form-control" rows="2" placeholder="Ask about the repository..." required></textarea>
                         <button type="submit" class="btn btn-primary align-self-end px-4" id="send-btn">
                             <span id="send-label">Send</span>
                             <span id="send-spinner" class="spinner-border spinner-border-sm d-none"></span>
@@ -71,10 +71,36 @@
 </div>
 
 <style>
-#chat-messages pre { font-size: 0.9rem; }
+.chat-bubble {
+    max-width: 85%;
+    border-radius: 12px;
+    padding: 10px 14px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+.chat-bubble pre {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 4px 0;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.chat-bubble code {
+    font-size: 0.85rem;
+}
+.chat-bubble p {
+    margin-bottom: 4px;
+}
+.chat-bubble ul, .chat-bubble ol {
+    margin-bottom: 4px;
+    padding-left: 1.2rem;
+}
 .list-group-item.active { background-color: #0d6efd; border-color: #0d6efd; }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
@@ -87,27 +113,32 @@ const sessionIdDisplay = document.getElementById("session-id");
 
 chatMessages.scrollTop = chatMessages.scrollHeight;
 
+document.querySelectorAll('#chat-messages .chat-content').forEach(function(el) {
+    if (!el.closest('.bg-primary')) {
+        el.innerHTML = marked.parse(el.textContent);
+    }
+});
+
 function appendMessage(role, content) {
     const wrapper = document.createElement("div");
     wrapper.className = "d-flex " + (role === "user" ? "justify-content-end" : "justify-content-start") + " mb-2";
 
     const bubble = document.createElement("div");
-    bubble.className = (role === "user" ? "bg-primary text-white" : "bg-white border") + " rounded-pill px-3 py-2";
-    bubble.style.maxWidth = "75%";
+    bubble.className = (role === "user" ? "bg-primary text-white" : "bg-white border") + " chat-bubble";
 
     const strong = document.createElement("strong");
     strong.textContent = role === "user" ? "You: " : "AI: ";
-    strong.appendChild(document.createElement("br"));
 
-    const pre = document.createElement("pre");
-    pre.className = "mb-0";
-    pre.style.whiteSpace = "pre-wrap";
-    pre.style.fontFamily = "inherit";
-    pre.style.background = "transparent";
-    pre.textContent = content;
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "chat-content";
+    if (role === "user") {
+        contentDiv.textContent = content;
+    } else {
+        contentDiv.innerHTML = marked.parse(content);
+    }
 
     bubble.appendChild(strong);
-    bubble.appendChild(pre);
+    bubble.appendChild(contentDiv);
     wrapper.appendChild(bubble);
     chatMessages.appendChild(wrapper);
     chatMessages.scrollTop = chatMessages.scrollHeight;
