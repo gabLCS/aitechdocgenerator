@@ -41,11 +41,22 @@
                             <small class="text-muted"><a href="{{ repo.url }}" target="_blank">{{ repo.url
                                     }}</a></small>
 
-                            <!-- Simple list of existing jobs could be added here -->
-                            {% if repo.last_job_id %}
-                            <div class="mt-1">
-                                <a href="{{ url_for('view_analysis', job_id=repo.last_job_id) }}"
-                                    class="badge bg-secondary">View Last Analysis</a>
+                            {% if repo.jobs %}
+                            <div class="mt-2">
+                                {% for job in repo.jobs[:5] %}
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <a href="{{ url_for('view_analysis', job_id=job.id) }}"
+                                        class="badge {% if job.status == 'DONE' %}bg-success{% elif job.status == 'ERROR' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-decoration-none">
+                                        #{{ job.id }} — {{ job.status }}
+                                    </a>
+                                    <form action="{{ url_for('delete_analysis_route', job_id=job.id) }}"
+                                        method="POST" style="display:inline;"
+                                        onsubmit="return confirm('Deletar análise #{{ job.id }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"
+                                            title="Delete">✕</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
                             </div>
                             {% endif %}
                         </div>

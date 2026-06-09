@@ -1,6 +1,6 @@
 # 📚 AutoDocGen - Gerador Automático de Documentação Técnica
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
 [![LM Studio](https://img.shields.io/badge/LM_Studio-Qwen3_4B-orange.svg)](https://lmstudio.ai/)
@@ -88,8 +88,8 @@ sudo apt install -y \
 ### 1. Clone o Repositório
 
 ```bash
-git clone https://github.com/seu-usuario/autodocgen.git
-cd autodocgen
+git clone https://github.com/gabLCS/aitechdocgenerator.git
+cd aitechdocgenerator
 ```
 
 ### 2. Estrutura do Projeto
@@ -98,10 +98,14 @@ cd autodocgen
 autodocgen/
 ├── backend/          # API FastAPI
 │   ├── run.bat       # Inicializador Windows para o backend
-│   └── run.sh        # Inicializador macOS/Linux para o backend
+│   ├── run.sh        # Inicializador macOS/Linux para o backend
+│   └── .env.example  # Template de variáveis de ambiente
 ├── frontend/         # Interface Flask
 │   ├── start.bat     # Inicializador Windows para o frontend
-│   └── start.sh      # Inicializador macOS/Linux para o frontend
+│   ├── start.sh      # Inicializador macOS/Linux para o frontend
+│   └── .env.example  # Template de variáveis de ambiente
+├── setup.bat         # Setup Windows (copia .env + uv sync)
+├── setup.sh          # Setup macOS/Linux (copia .env + uv sync)
 ├── start.sh          # Inicializador unificado macOS/Linux (ambos serviços)
 ├── LICENSE           # Licença MIT
 └── README.md
@@ -109,18 +113,24 @@ autodocgen/
 
 ### 3. Instalação das Dependências
 
-**Backend (FastAPI):**
+**Automática (recomendado):**
 ```bash
-cd backend
-uv venv
-uv pip install -r requirements.txt
+# Windows
+setup.bat
+
+# macOS / Linux
+./setup.sh
 ```
 
-**Frontend (Flask):**
+**Manual:**
 ```bash
+# Backend
+cd backend
+uv sync
+
+# Frontend
 cd ../frontend
-uv venv
-uv pip install -r requirements.txt
+uv sync
 ```
 
 ## 🏃 Executando a Aplicação

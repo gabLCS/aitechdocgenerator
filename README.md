@@ -1,6 +1,6 @@
 # 📚 AutoDocGen - Automatic Technical Documentation Generator
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
 [![LM Studio](https://img.shields.io/badge/LM_Studio-Qwen3_4B-orange.svg)](https://lmstudio.ai/)
@@ -88,8 +88,8 @@ sudo apt install -y \
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/autodocgen.git
-cd autodocgen
+git clone https://github.com/gabLCS/aitechdocgenerator.git
+cd aitechdocgenerator
 ```
 
 ### 2. Project Structure
@@ -98,10 +98,14 @@ cd autodocgen
 autodocgen/
 ├── backend/          # FastAPI API
 │   ├── run.bat       # Windows launcher for backend
-│   └── run.sh        # macOS/Linux launcher for backend
+│   ├── run.sh        # macOS/Linux launcher for backend
+│   └── .env.example  # Environment variable template
 ├── frontend/         # Flask Interface
 │   ├── start.bat     # Windows launcher for frontend
-│   └── start.sh      # macOS/Linux launcher for frontend
+│   ├── start.sh      # macOS/Linux launcher for frontend
+│   └── .env.example  # Environment variable template
+├── setup.bat         # Windows setup (copies .env + uv sync)
+├── setup.sh          # macOS/Linux setup (copies .env + uv sync)
 ├── start.sh          # Unified macOS/Linux launcher (both services)
 ├── LICENSE           # MIT License
 └── README.md
@@ -109,18 +113,24 @@ autodocgen/
 
 ### 3. Installing Dependencies
 
-**Backend (FastAPI):**
+**Automatic (recommended):**
 ```bash
-cd backend
-uv venv
-uv pip install -r requirements.txt
+# Windows
+setup.bat
+
+# macOS / Linux
+./setup.sh
 ```
 
-**Frontend (Flask):**
+**Manual:**
 ```bash
+# Backend
+cd backend
+uv sync
+
+# Frontend
 cd ../frontend
-uv venv
-uv pip install -r requirements.txt
+uv sync
 ```
 
 ## 🏃 Running the Application

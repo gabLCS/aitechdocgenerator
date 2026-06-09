@@ -216,3 +216,25 @@ def download_pdf(
     from fastapi.responses import FileResponse
     logger.info(f"Serving PDF to user '{current_user.email}': '{pdf_path}'")
     return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
+
+
+@router.delete("/{id}")
+def delete_analysis(
+    id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    logger.info(f"User '{current_user.email}' requested deletion of Analysis Job ID: {id}")
+    job = db.query(models.AnalysisJob).filter(models.AnalysisJob.id == id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+
+    # Verify ownership through the repository
+    repo = db.query(models.Repository).filter(models.Repository.id == job.repository_id).first()
+    if not repo or repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+
+    db.delete(job)
+    db.commit()
+    logger.info(f"Analysis Job ID {id} deleted successfully.")
+    return {"ok": True}

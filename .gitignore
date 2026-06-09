@@ -9,6 +9,6 @@ backend/storage
 *.bat
 !backend/run.bat
 !frontend/start.bat
-!start.bat
+!setup.bat
 *.log
 logs/

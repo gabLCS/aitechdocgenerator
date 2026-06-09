@@ -135,7 +135,11 @@ def add_repo():
     url = request.form.get("url")
     headers = {"Authorization": f"Bearer {session['access_token']}"}
     
-    requests.post(f"{API_URL}/repos/", json={"url": url}, headers=headers)
+    resp = requests.post(f"{API_URL}/repos/", json={"url": url}, headers=headers)
+    if resp.status_code != 200:
+        flash(f"Failed to add repository: {resp.text[:200]}")
+    else:
+        flash("Repository added successfully!", "success")
     return redirect(url_for("dashboard"))
 
 @app.route("/repos/delete/<int:repo_id>")
@@ -144,7 +148,11 @@ def delete_repo(repo_id):
         return redirect(url_for("login"))
         
     headers = {"Authorization": f"Bearer {session['access_token']}"}
-    requests.delete(f"{API_URL}/repos/{repo_id}", headers=headers)
+    resp = requests.delete(f"{API_URL}/repos/{repo_id}", headers=headers)
+    if resp.status_code != 200:
+        flash(f"Failed to delete repository: {resp.text[:200]}")
+    else:
+        flash("Repository deleted.", "success")
     return redirect(url_for("dashboard"))
 
 @app.route("/analyses/start/<int:repo_id>", methods=["POST"])
@@ -320,6 +328,18 @@ def api_analysis_document(job_id):
     except Exception as e:
         from flask import jsonify
         return jsonify({"error": str(e)}), 500
+
+@app.route("/analyses/<int:job_id>/delete", methods=["POST"])
+def delete_analysis_route(job_id):
+    if "access_token" not in session:
+        return redirect(url_for("login"))
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    resp = requests.delete(f"{API_URL}/analyses/{job_id}", headers=headers)
+    if resp.status_code == 200:
+        flash("Analysis deleted.", "success")
+    else:
+        flash(f"Failed to delete analysis: {resp.text[:200]}")
+    return redirect(url_for("dashboard"))
 
 @app.route("/logout")
 def logout():

@@ -59,6 +59,9 @@
 <div class="row">
   <div class="col-md-12">
     <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary mb-3">← Voltar ao Dashboard</a>
+    <form action="{{ url_for('delete_analysis_route', job_id=job.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Deletar esta análise permanentemente?');">
+      <button type="submit" class="btn btn-outline-danger mb-3">🗑 Deletar Análise</button>
+    </form>
     <h2>Análise do Repositório</h2>
 
     <div class="status-row mb-3">
