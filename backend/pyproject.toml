@@ -21,3 +21,10 @@ dependencies = [
     "markdown",
     "xhtml2pdf",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+    "pytest-httpx>=0.36.2",
+]
