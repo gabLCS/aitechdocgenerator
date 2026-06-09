@@ -1,8 +1,9 @@
+import os
 import httpx
 import json
 
 LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
-MODEL_NAME = "qwen3-4b-2507"
+MODEL_NAME = os.environ.get("LMSTUDIO_MODEL", "qwen3-4b-2507")
 
 async def generate_text(prompt: str, system_prompt: str = "") -> str:
     messages = []

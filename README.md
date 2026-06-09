@@ -5,6 +5,7 @@
 [![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
 [![LM Studio](https://img.shields.io/badge/LM_Studio-Qwen3_4B-orange.svg)](https://lmstudio.ai/)
 [![Ollama](https://img.shields.io/badge/Ollama-Qwen3-orange.svg)](https://ollama.ai/)
+[![Tests](https://img.shields.io/badge/Tests-51_passing-green.svg)](backend/tests/)
 
 A smart web tool that analyzes public GitHub repositories and automatically generates complete technical documentation using local Generative AI (LLM).
 
@@ -96,12 +97,14 @@ cd autodocgen
 ```
 autodocgen/
 ├── backend/          # FastAPI API
-│   └── logs/         # Structured logs by component (generated at runtime)
+│   ├── run.bat       # Windows launcher for backend
+│   └── run.sh        # macOS/Linux launcher for backend
 ├── frontend/         # Flask Interface
-│   └── logs/         # Frontend logs (generated at runtime)
-├── storage/          # Temporary files and generated documents
-├── README.md
-└── LICENSE
+│   ├── start.bat     # Windows launcher for frontend
+│   └── start.sh      # macOS/Linux launcher for frontend
+├── start.sh          # Unified macOS/Linux launcher (both services)
+├── LICENSE           # MIT License
+└── README.md
 ```
 
 ### 3. Installing Dependencies
@@ -123,6 +126,10 @@ uv pip install -r requirements.txt
 ## 🏃 Running the Application
 
 You will need **two terminals** open simultaneously.
+
+> 💡 **Quick start:** Use the unified script at the project root:
+> - **macOS / Linux:** `./start.sh` (starts both backend and frontend)
+> - **Windows:** Open two terminals and run `backend\run.bat` and `frontend\start.bat`
 
 ### Terminal 1: Backend (FastAPI)
 
@@ -215,13 +222,13 @@ backend/
 │   ├── routers/
 │   │   ├── auth.py              # Authentication and registration endpoints
 │   │   ├── repos.py             # Repository management endpoints
-│   │   ├── analyses.py          # Analysis endpoints + GET /{id}/steps endpoint
+│   │   ├── analyses.py          # Analysis endpoints + background pipeline with timeout
 │   │   └── chat.py              # Chat endpoints (send, sessions, history, delete)
 │   ├── services/
 │   │   ├── llm_provider.py      # Auto-detects LM Studio or Ollama
-│   │   ├── lm_studio_client.py  # LM Studio API integration (port 1234)
-│   │   ├── ollama_client.py     # Ollama API integration (port 11434)
-│   │   ├── opencode_client.py   # OpenCode API integration (optional, port 7000)
+│   │   ├── lm_studio_client.py  # LM Studio API (port 1234, model from env)
+│   │   ├── ollama_client.py     # Ollama API (port 11434, model from env)
+│   │   ├── opencode_client.py   # OpenCode API (optional, port 7000)
 │   │   ├── chat_service.py      # Chat session management with SQLite persistence
 │   │   ├── github_fetcher.py    # GitHub ZIP download
 │   │   ├── repo_indexer.py      # File traversal and indexing
@@ -229,25 +236,22 @@ backend/
 │   │   ├── doc_generator.py     # Documentation generation orchestration
 │   │   └── pdf_generator.py     # Markdown → PDF conversion (xhtml2pdf)
 │   ├── logging_config.py        # Dual-channel logger utility (console + file)
-│   ├── models.py                # SQLAlchemy models (User, Repository, AnalysisJob, Document, ChatSession, ChatMessage)
+│   ├── models.py                # SQLAlchemy models
 │   ├── schemas.py               # Pydantic v2 schemas
-│   ├── database.py              # SQLAlchemy configuration and SessionLocal
-│   ├── security.py              # Native bcrypt password hashing/verification
+│   ├── database.py              # SQLAlchemy configuration
+│   ├── security.py              # bcrypt password hashing, SECRET_KEY from env
 │   └── main.py                  # FastAPI app with lifespan and startup checks
-├── logs/                        # Log files generated at runtime
-│   ├── initialization.log
-│   ├── analyses.log
-│   ├── repos.log
-│   ├── llm_provider.log
-│   ├── ollama_client.log
-│   ├── github_fetcher.log
-│   ├── context_builder.log
-│   ├── repo_indexer.log
-│   ├── doc_generator.log
-│   └── pdf_generator.log
-├── storage/
-│   ├── repos/                   # Temporarily extracted ZIPs per job
-│   └── docs/                    # Generated PDFs
+├── tests/
+│   ├── conftest.py              # Test fixtures (in-memory SQLite, auth headers)
+│   ├── test_auth.py             # Registration, login, /me (7 tests)
+│   ├── test_repos.py            # Repository CRUD (9 tests)
+│   ├── test_analyses.py         # Analysis workflow (9 tests)
+│   ├── test_chat_service.py     # Chat sessions and messages (14 tests)
+│   └── test_opencode_client.py  # OpenCode API client (12 tests)
+├── .env.example                 # Environment variable template
+├── pytest.ini                   # Pytest configuration (asyncio mode)
+├── run.bat                      # Windows launcher
+├── run.sh                       # macOS/Linux launcher
 └── requirements.txt
 ```
 
@@ -258,15 +262,16 @@ frontend/
 │   ├── login.html
 │   ├── register.html
 │   ├── dashboard.html
-│   ├── analysis_result.html     # Interactive terminal with AJAX polling + Mermaid rendering
+│   ├── analysis_result.html     # Interactive terminal + Mermaid rendering + document fetch
 │   ├── analyzed_repos.html
-│   └── chat.html                # Chat interface with session list
+│   └── chat.html                # Chat interface with Markdown rendering
 ├── static/
 │   └── css/
-├── logging_config.py            # Dual-channel logger utility (console + file)
-├── logs/                        # Log files generated at runtime
-│   └── initialization.log
-├── app.py                       # Flask app with startup checks and chat route
+├── logging_config.py
+├── app.py                       # Flask app with startup checks and proxy routes
+├── .env.example                 # Environment variable template
+├── start.bat                    # Windows launcher
+├── start.sh                     # macOS/Linux launcher
 └── requirements.txt
 ```
 
@@ -277,24 +282,27 @@ frontend/
 Create a `.env` file in the `backend/` folder:
 
 ```env
-# Database
-DATABASE_URL=sqlite:///./storage/app.db
-
 # JWT
-SECRET_KEY=your_secret_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+SECRET_KEY=your-secret-key-here-change-in-production
 
-# GitHub
-GITHUB_API_TOKEN=your_token_here (optional)
+# LLM Models (optional — defaults work with Qwen3 on LM Studio / Ollama)
+LMSTUDIO_MODEL=qwen3-4b-2507
+OLLAMA_MODEL=qwen3
+
+# Analysis timeout (seconds)
+ANALYSIS_TIMEOUT_SECONDS=300
+
+# GitHub (optional)
+GITHUB_API_TOKEN=
 
 # Limits
 MAX_REPO_SIZE_MB=100
-MAX_FILE_COUNT=500
-ANALYSIS_TIMEOUT_SECONDS=300
 ```
 
-No LLM configuration is needed — the backend auto-detects LM Studio (port 1234) or Ollama (port 11434) at startup.
+> 💡 `SECRET_KEY` must be set for production. A warning is logged if the default key is used.
+> 💡 `LMSTUDIO_MODEL` and `OLLAMA_MODEL` let you switch models without editing source code.
+
+No LLM URL configuration is needed — the backend auto-detects LM Studio (port 1234) or Ollama (port 11434) at startup.
 
 ### Docker (Optional)
 

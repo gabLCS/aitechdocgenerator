@@ -1,3 +1,4 @@
+import os
 import httpx
 import json
 from ..logging_config import get_custom_logger
@@ -5,7 +6,7 @@ from ..logging_config import get_custom_logger
 logger = get_custom_logger("ollama_client", "ollama_client.log")
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "qwen3" # Or "qwen:7b", user specified qwen3
+MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen3")
 
 async def generate_text(prompt: str, system_prompt: str = "") -> str:
     """
