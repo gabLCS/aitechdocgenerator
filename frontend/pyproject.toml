@@ -1,7 +1,12 @@
 [project]
-name = "frontend"
+name = "autodocgen-frontend"
 version = "0.1.0"
-description = "Add your description here"
+description = "AutoDocGen frontend - Flask web interface"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "flask",
+    "requests",
+    "python-dotenv",
+    "markdown",
+]
