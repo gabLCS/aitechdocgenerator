@@ -402,7 +402,7 @@ Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICEN
 
 ## 👥 Autores
 
-Desenvolvido por [Armando Soares Sousa]
+Desenvolvido por [Gabriel Leonardo Cunha Santos](https://github.com/gabLCS) e [Armando Soares Sousa]
 
 ## 🙏 Agradecimentos
 
@@ -413,4 +413,6 @@ Desenvolvido por [Armando Soares Sousa]
 
 ## 📞 Suporte
 
-Para suporte, por favor abra uma issue no repositório ou entre em contato em [armando@ufpi.edu.br].
+Para suporte, por favor abra uma issue no repositório ou entre em contato:
+- [gabriel\_leonardosantos@ufpi.edu.br](mailto:gabriel_leonardosantos@ufpi.edu.br)
+- [armando@ufpi.edu.br](mailto:armando@ufpi.edu.br)
