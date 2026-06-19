@@ -402,7 +402,7 @@ Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICEN
 
 ## 👥 Autores
 
-Desenvolvido por [Gabriel Leonardo Cunha Santos](https://github.com/gabLCS) e [Armando Soares Sousa]
+Desenvolvido por [Gabriel Leonardo Cunha Santos](https://github.com/gabLCS) e [Armando Soares Sousa](https://github.com/armandossrecife)
 
 ## 🙏 Agradecimentos
 
